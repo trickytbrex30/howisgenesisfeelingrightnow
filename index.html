@@ -218,6 +218,7 @@ const PHOTO_SIDE = 1600;   // keeps photos small enough for the free 1 GB of sto
 const PAD_SIZE = 900;
 const INKS = ['#2b1a24', '#f0609c', '#ff8fbe', '#ffb65c', '#ffd76e', '#7fd1ae', '#7cc4ff', '#b794f6'];
 const NIBS = [['Thin', 5], ['Medium', 12], ['Thick', 28]];
+const APP_STALE_MS = 3 * 60 * 60 * 1000;   // an app "open" this old probably lost its close report
 
 const FEELINGS = [
   ['😊', 'Happy'], ['🥰', 'Loved'], ['😌', 'Calm'], ['🤩', 'Excited'],
@@ -231,6 +232,9 @@ const db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE
 let me = null;              // 's' or 'p'
 let ntfyCode = '';
 let entries = [];
+let seen = {};              // 's' or 'p' -> { on, feelings, albums: { id: newest change seen } }
+let appCode = '';           // private code the iPhone Shortcut sends when reporting an app
+let appLog = [];
 let online = true;
 let view = 'feelings';
 let draft = { e: '', x: '', pts: [] };
@@ -362,14 +366,149 @@ async function loadConfig() {
     if (error) throw error;
   }
   ntfyCode = data.data.ntfy;
+  appCode = data.data[`app_${me}`] || '';
 }
 
 async function refreshFeelings() {
   const { data, error } = await db.from('entries').select('id, data').neq('id', 'config').order('at', { ascending: false }).limit(300);
   if (error) { online = false; paint(); return; }
   online = true;
+  const before = JSON.stringify(seenBy().albums);
+  for (const r of data) if (r.id.startsWith('seen-')) seen[r.id.slice(5)] = mergeSeen(seen[r.id.slice(5)], r.data);
   entries = data.map(r => clean({ ...r.data, id: r.id })).filter(Boolean).sort((a, b) => b.t - a.t);
   paint();
+  if (JSON.stringify(seenBy().albums) !== before) paintIdeas();
+}
+
+/* Seen marks. Each person records the newest change of the other's they have had on screen.
+   Those are the writer's own timestamps, so phones with slightly different clocks still agree. */
+const seenBy = () => seen[theirTag()] || {};
+const mySeen = () => (seen[me] ||= { albums: {} });
+
+function mergeSeen(a = {}, b = {}) {
+  const albums = { ...a.albums };
+  for (const [id, t] of Object.entries(b.albums || {})) albums[id] = Math.max(albums[id] ?? 0, t);
+  return { on: Math.max(a.on || 0, b.on || 0), feelings: Math.max(a.feelings || 0, b.feelings || 0), albums };
+}
+
+async function pushSeen() {
+  await db.from('entries').upsert({ id: `seen-${me}`, data: mySeen(), at: new Date().toISOString() });
+}
+
+function heartbeat() {
+  if (document.hidden) return;
+  mySeen().on = Date.now();
+  pushSeen();
+}
+
+const feelingChange = (e) => (e.k === 'r' ? { by: 'p', t: e.t } : { by: e.ed ? e.ed.by : e.by, t: e.ed ? e.ed.t : e.t });
+const itemChange = (i) => ({ by: i.edited_by || i.made_by, t: new Date(i.edited_at || i.made_at).getTime() });
+const newestFromThem = (changes) => Math.max(0, ...changes.filter(c => c.by !== me).map(c => c.t));
+
+function markFeelingsSeen() {
+  const newest = newestFromThem(entries.map(feelingChange));
+  if (document.hidden || newest <= (mySeen().feelings || 0)) return;
+  mySeen().feelings = newest;
+  pushSeen();
+}
+
+function markAlbumSeen() {
+  if (document.hidden || !slots.itemList || !ideas.open) return;
+  const newest = newestFromThem(itemsIn(ideas.open).map(itemChange));
+  const albums = mySeen().albums;
+  if (ideas.open in albums && newest <= albums[ideas.open]) return;
+  albums[ideas.open] = newest;
+  pushSeen();
+}
+
+/* Only the person who made a change gets told whether it was seen. */
+function feelingSeenLabel(e) {
+  const c = feelingChange(e);
+  if (c.by !== me) return null;
+  return h('small', { text: (seenBy().feelings || 0) >= c.t ? `✓ Seen by ${them()}` : 'Not seen yet' });
+}
+
+function itemSeenText(item) {
+  const c = itemChange(item);
+  if (c.by !== me) return '';
+  return (seenBy().albums?.[item.album_id] ?? -1) >= c.t ? '✓ seen' : 'not seen yet';
+}
+
+function albumSeenText(a) {
+  if (a.made_by !== me) return '';
+  return a.id in (seenBy().albums || {}) ? '✓ seen' : 'not seen yet';
+}
+
+function presenceText() {
+  const on = seenBy().on;
+  if (!on) return `${them()} has not been on the site since this was added`;
+  return Date.now() - on < 75000 ? `🟢 ${them()} is on the site now` : `${them()} was last on the site ${ago(on)}`;
+}
+
+/* App activity, reported by each person's own iPhone Shortcut. */
+async function refreshApps() {
+  const { data, error } = await db.from('app_log').select('*').order('at', { ascending: false }).limit(300);
+  if (error) return;
+  appLog = data;
+  paintApps();
+}
+
+function appSessions(tag) {
+  const sessions = [];
+  for (const ev of appLog.filter(e => e.who === tag).reverse()) {
+    const t = new Date(ev.at).getTime();
+    const last = sessions[sessions.length - 1];
+    const running = last && !last.end;
+    if (ev.event === 'open') {
+      if (running) last.end = t;   // a close can go missing, and the next open ends the visit anyway
+      sessions.push({ who: tag, app: ev.app, start: t, end: 0 });
+    } else if (running && last.app === ev.app) {
+      last.end = t;
+    }
+  }
+  return sessions;
+}
+
+function howLong(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return 'under a minute';
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
+}
+
+function paintApps() {
+  if (!slots.apps) return;
+  slots.apps.hidden = !appLog.length;
+  if (!appLog.length) return;
+  const stale = (s) => !s.end && Date.now() - s.start > APP_STALE_MS;
+  const status = (tag) => {
+    const last = appSessions(tag).pop();
+    const name = PEOPLE[tag];
+    if (!last) return `${name} has no app activity yet`;
+    if (stale(last)) return `${name} opened ${last.app} ${ago(last.start)}`;
+    return last.end ? `${name} last used ${last.app} ${ago(last.end)}` : `🟢 ${name} is on ${last.app}, ${howLong(Date.now() - last.start)} so far`;
+  };
+  const rows = [];
+  let day = '';
+  for (const s of [...appSessions('s'), ...appSessions('p')].sort((a, b) => b.start - a.start).slice(0, 60)) {
+    const key = dayKey(s.start);
+    if (key !== day) { day = key; rows.push(h('li', { className: 'day', text: dayLabel(key) })); }
+    const length = s.end ? howLong(s.end - s.start) : stale(s) ? 'no end time' : 'still open';
+    rows.push(h('li', { className: 'row' },
+      h('span', { className: 'ico', text: '📱' }),
+      h('div', { className: 'txt', text: `${nameOf(s.who)}: ${s.app} · ${length}` }),
+      h('time', { text: clock(s.start) }),
+    ));
+  }
+  slots.apps.replaceChildren(
+    h('h2', { text: 'Phone activity' }),
+    h('p', { text: status(theirTag()) }),
+    h('p', { className: 'small muted', text: status(me) }),
+    h('details', { open: slots.appsOpen, on: { toggle: (ev) => { slots.appsOpen = ev.target.open; } } },
+      h('summary', { text: 'App history' }),
+      h('ul', { className: 'log' }, ...rows),
+    ),
+  );
 }
 
 async function saveEntry(entry) {
@@ -437,6 +576,7 @@ function paintHero() {
   const words = f ? f.x : 'Nothing shared yet';
   slots.hero.replaceChildren(...[
     h('div', { className: 'who', text: `${them()} right now` }),
+    h('div', { className: 'when', text: presenceText() }),
     h('div', { className: 'face', text: f ? f.e : '💭' }),
     h('div', { className: words.length > 40 ? 'words long' : 'words', text: words }),
     f ? pointsList(f.pts) : null,
@@ -450,6 +590,7 @@ function paintHero() {
       h('b', { text: own ? `You: ${own.x}` : 'You have not shared yet' }),
       own ? pointsList(own.pts) : null,
       h('small', { text: own ? whenText(own, `Changed ${ago(own.t)}`) : 'Pick a feeling below.' }),
+      own ? feelingSeenLabel(own) : null,
       own ? editLink(own) : null,
     ].filter(Boolean)),
   );
@@ -478,7 +619,11 @@ function paintLog() {
       h('div', { className: 'txt' }, ...[
         h('span', { text: e.k === 'f' ? `${nameOf(e.by)}: ${e.x}` : `${nameOf('p')} rated the day ${e.v}/10` }),
         e.k === 'f' ? pointsList(e.pts) : null,
-        e.k === 'f' ? h('div', { className: 'row-foot' }, e.ed ? h('small', { text: editedBy(e.ed.by) }) : null, editLink(e)) : null,
+        h('div', { className: 'row-foot' },
+          e.ed ? h('small', { text: editedBy(e.ed.by) }) : null,
+          feelingSeenLabel(e),
+          e.k === 'f' ? editLink(e) : null,
+        ),
       ].filter(Boolean)),
       h('time', { text: clock(e.t) }),
     ));
@@ -492,6 +637,8 @@ function paint() {
   paintHero();
   paintRating();
   paintLog();
+  paintApps();
+  markFeelingsSeen();
 }
 
 const canSend = (d) => !!d.e || d.pts.some(p => p.t.trim());
@@ -617,6 +764,38 @@ function notifySetup() {
   );
 }
 
+function appSetup() {
+  if (!appCode) return null;
+  const step = (text) => h('li', { text });
+  return h('details', {},
+    h('summary', { text: 'Share what app you are using' }),
+    h('div', { className: 'stack' },
+      h('p', { text: `This tells ${them()} when you open and close the apps you choose. Only you can set it up on your phone, and you can delete an automation in Shortcuts whenever you like.` }),
+      h('b', { text: 'Do this once' }),
+      h('ol', {},
+        step('In the Shortcuts app, tap + on the Shortcuts tab and name it Report App.'),
+        step('Add the action "Get Contents of URL" and paste the address below as its URL.'),
+        step('Expand the action and set Method to POST.'),
+        step('Under Headers, add one with the key apikey and paste the key below as its value.'),
+        step('Set Request Body to JSON. Add a Text field with the key code and paste your code below as its value.'),
+        step('Add another Text field with the key what. For its value, choose the Shortcut Input variable.'),
+      ),
+      copyLine(`${SUPABASE_URL}/rest/v1/rpc/log_app`, 'Address'),
+      copyLine(SUPABASE_KEY, 'Key'),
+      copyLine(appCode, 'Your private code'),
+      h('b', { text: 'Then, twice for each app' }),
+      h('ol', {},
+        step('On the Automation tab, tap +, choose App, pick the app and tick Is Opened only.'),
+        step('Choose Run Immediately, then New Blank Automation.'),
+        step('Add a Text action and type the app name, a line, and open, like this: TikTok|open'),
+        step('Add the action Run Shortcut, choose Report App, and set its Input to the Text from the step before.'),
+        step('Make a second automation the same way with Is Closed ticked, typing TikTok|close'),
+      ),
+      h('p', { className: 'small muted', text: 'Keep your code private. Anyone who has it could add fake app activity.' }),
+    ),
+  );
+}
+
 function aboutBlock() {
   return h('details', {},
     h('summary', { text: 'Add to home screen and more' }),
@@ -647,13 +826,14 @@ function showHome() {
     slots.mine = h('section', { className: 'own' });
     slots.log = h('ul', { className: 'log' });
     const history = h('section', { className: 'stack' }, h('h2', { text: 'History' }), slots.log);
-    const settings = h('div', { className: 'stack' }, notifySetup(), aboutBlock());
+    slots.apps = h('section', { className: 'stack', hidden: true });
+    const settings = h('div', { className: 'stack' }, notifySetup(), appSetup(), aboutBlock());
     const form = feelingForm(draft, { heading: 'How are you feeling?', action: `Send to ${them()}`, run: shareFeeling });
     if (me === 's') {
       slots.rating = h('div', {});
-      app.replaceChildren(top, tabs(), slots.hero, slots.mine, form, slots.rating, history, settings);
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, slots.apps, form, slots.rating, history, settings);
     } else {
-      app.replaceChildren(top, tabs(), slots.hero, slots.mine, form, ratingBlock(), history, settings);
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, slots.apps, form, ratingBlock(), history, settings);
     }
   } else {
     slots.ideas = h('div', { className: 'stack ideas' });
@@ -742,6 +922,7 @@ async function paintIdeas() {
     await linkFiles(list.filter(i => i.file_path).map(i => i.file_path));
     if (!slots.itemList) return;
     slots.itemList.replaceChildren(...(list.length ? list.map(itemCard) : [h('p', { className: 'muted', text: 'Nothing in here yet. Write, draw or add a photo.' })]));
+    markAlbumSeen();
   }
 }
 
@@ -754,7 +935,7 @@ function albumCard({ a, snippet }) {
       ? h('img', { src: linkTo(cover.file_path), alt: '', loading: 'lazy' })
       : h('span', { className: 'album-blank', text: '♡' }),
     h('span', { className: 'album-title', text: a.title }),
-    h('span', { className: 'album-meta', text: snippet || `${count} · by ${nameOf(a.made_by)}` }),
+    h('span', { className: 'album-meta', text: snippet || [count, `by ${nameOf(a.made_by)}`, albumSeenText(a)].filter(Boolean).join(' · ') }),
   );
 }
 
@@ -773,6 +954,7 @@ function itemCard(item) {
       h('span', { text: [
         `${nameOf(item.made_by)} · ${ago(new Date(item.made_at).getTime())}`,
         item.edited_by ? editedBy(item.edited_by) : '',
+        itemSeenText(item),
       ].filter(Boolean).join(' · ') }),
       h('span', { className: 'item-tools' },
         item.kind === 'note' ? h('button', { className: 'link', type: 'button', text: 'Edit', on: { click: () => editNote(item) } }) : null,
@@ -1133,7 +1315,15 @@ function listen() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'albums' }, ideasChanged)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'album_items' }, ideasChanged)
     .subscribe();
-  const check = () => { if (!document.hidden) { refreshFeelings(); refreshIdeas(); } };
+  db.channel('apps').on(...on('app_log', refreshApps)).subscribe();
+  const check = () => {
+    if (document.hidden) return;
+    refreshFeelings();
+    refreshIdeas();
+    refreshApps();
+    heartbeat();
+    markAlbumSeen();
+  };
   setInterval(check, POLL_MS);
   document.addEventListener('visibilitychange', check);
 }
@@ -1148,8 +1338,9 @@ async function enter(session) {
     return;
   }
   showHome();
-  refreshFeelings();
+  refreshFeelings().then(heartbeat);
   refreshIdeas();
+  refreshApps();
   listen();
 }
 

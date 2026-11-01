@@ -99,7 +99,7 @@ input, textarea {
 textarea { resize: vertical; display: block; }
 input::placeholder, textarea::placeholder { color: #b5709a; }
 .fields { display: grid; gap: 12px; }
-#custom { max-width: 96px; }
+.custom { max-width: 96px; }
 
 .pts { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 6px; justify-self: stretch; text-align: left; }
 .pts li { display: grid; grid-template-columns: 22px 28px minmax(0, 1fr); gap: 4px; align-items: start; font-size: .95rem; }
@@ -169,7 +169,15 @@ ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .album-blank { background: var(--tint); color: #f0609c; font-size: 2.5rem; }
 .album-title { font: 400 1rem/1.25 var(--display); overflow-wrap: anywhere; padding: 4px 4px 0; }
 .album-meta { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; padding: 0 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.albums:empty { display: none; }
+.album-tools { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.item-tools { display: flex; gap: 12px; flex: none; }
+.row-foot { display: flex; align-items: center; gap: 10px; font-size: .8rem; color: var(--muted); }
+.row-foot .link { padding: 2px 0; font-size: .8rem; }
+.own-text .link { justify-self: start; font-size: .8rem; padding: 2px 0; }
+.sheet { width: min(92vw, 440px); max-height: 86dvh; margin: auto; padding: 16px; overflow: auto; border: 2.5px solid var(--line); border-radius: 24px; background: var(--surface); color: var(--fg); }
+.sheet::backdrop { background: rgb(90 28 63 / .4); }
 .actions .ghost { padding: 10px 4px; }
 .link { background: none; border: 0; color: var(--muted); font: 800 .875rem var(--body); cursor: pointer; padding: 6px 0; text-decoration: underline; }
 .link.back { justify-self: start; text-decoration: none; font-size: 1rem; color: var(--fg); }
@@ -257,9 +265,26 @@ function h(tag, props, ...kids) {
 
 function toast(msg) {
   const t = document.getElementById('toast');
+  (document.querySelector('dialog[open]') || document.body).append(t);   // a pop-up window would otherwise cover it
   t.textContent = msg; t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+/* A pop-up window. It sits outside the page, so the regular refreshes never wipe what is being typed in it. */
+function sheet(title, build) {
+  const box = h('dialog', { className: 'sheet', on: { close: () => {
+    document.body.append(document.getElementById('toast'));
+    box.remove();
+  } } });
+  const close = () => box.close();
+  box.append(h('div', { className: 'stack' },
+    h('h2', { text: title }),
+    ...build(close),
+    h('button', { className: 'ghost', type: 'button', text: 'Cancel', on: { click: close } }),
+  ));
+  document.body.append(box);
+  box.showModal();
 }
 
 async function copy(text, input) {
@@ -272,6 +297,7 @@ const them = () => PEOPLE[theirTag()];
 const myTag = () => me;
 const theirTag = () => (me === 's' ? 'p' : 's');
 const nameOf = (tag) => (tag === me ? 'You' : PEOPLE[tag] || 'Someone');
+const editedBy = (tag) => (tag === me ? 'edited by you' : `edited by ${PEOPLE[tag] || 'someone'}`);
 const pad = (n) => String(n).padStart(2, '0');
 const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -303,7 +329,8 @@ function cleanPoints(list) {
 function clean(x) {
   if (!x || typeof x.id !== 'string' || x.id.length > 40 || !Number.isFinite(x.t)) return null;
   if (x.k === 'f' && typeof x.e === 'string' && x.e.length <= 16 && typeof x.x === 'string' && x.x.length <= 520) {
-    return { id: x.id, k: 'f', t: x.t, e: x.e, x: x.x, by: x.by === 'p' ? 'p' : 's', pts: cleanPoints(x.pts) };
+    const ed = x.ed && (x.ed.by === 's' || x.ed.by === 'p') && Number.isFinite(x.ed.t) ? { by: x.ed.by, t: x.ed.t } : null;
+    return { id: x.id, k: 'f', t: x.t, e: x.e, x: x.x, by: x.by === 'p' ? 'p' : 's', pts: cleanPoints(x.pts), ed };
   }
   if (x.k === 'r' && Number.isInteger(x.v) && x.v >= 1 && x.v <= 10) {
     return { id: x.id, k: 'r', t: x.t, v: x.v };
@@ -353,11 +380,14 @@ async function saveEntry(entry) {
   return true;
 }
 
+function composed(d) {
+  const pts = d.pts.map(p => ({ e: p.e, t: p.t.trim() })).filter(p => p.t);
+  const e = d.e || pts[0].e;
+  return { e, x: d.x.trim() || (FEELINGS.find(f => f[0] === e) || [])[1] || 'A few things', pts };
+}
+
 async function shareFeeling() {
-  const pts = draft.pts.map(p => ({ e: p.e, t: p.t.trim() })).filter(p => p.t);
-  const e = draft.e || pts[0].e;
-  const words = draft.x.trim();
-  const x = words || (FEELINGS.find(f => f[0] === e) || [])[1] || 'A few things';
+  const { e, x, pts } = composed(draft);
   const short = [...x].length > 70 ? `${[...x].slice(0, 67).join('')}…` : x;
   const t = Date.now();
   if (!await saveEntry({ id: `f${t}`, k: 'f', t, e, x, by: myTag(), pts })) return;
@@ -366,6 +396,17 @@ async function shareFeeling() {
   notify(`${e} ${you()}: ${short}`,
     [short === x ? '' : x, ...pts.map((p, i) => `${i + 1}. ${p.e} ${p.t}`), `Changed at ${clock(t)}`].filter(Boolean).join('\n'));
   toast(`Sent to ${them()}`);
+}
+
+function editFeeling(entry) {
+  const d = { e: entry.e, x: entry.x, pts: entry.pts.map(p => ({ ...p })) };
+  sheet('Edit this feeling', (close) => [feelingForm(d, { action: 'Save changes', run: async () => {
+    const next = { ...entry, ...composed(d), ed: { by: myTag(), t: Date.now() } };
+    if (!await saveEntry(next)) return;
+    close();
+    notify(`✏️ ${you()} edited a feeling`, `${next.e} ${next.x}`.slice(0, 200));
+    toast('Saved');
+  } })]);
 }
 
 async function rateDay(v) {
@@ -388,6 +429,9 @@ function pointsList(pts) {
   )));
 }
 
+const editLink = (entry) => h('button', { className: 'link', type: 'button', text: 'Edit', on: { click: () => editFeeling(entry) } });
+const whenText = (e, start) => (e.ed ? `${start} · ${editedBy(e.ed.by)}` : start);
+
 function paintHero() {
   const f = latestFeeling(theirTag());
   const words = f ? f.x : 'Nothing shared yet';
@@ -396,7 +440,8 @@ function paintHero() {
     h('div', { className: 'face', text: f ? f.e : '💭' }),
     h('div', { className: words.length > 40 ? 'words long' : 'words', text: words }),
     f ? pointsList(f.pts) : null,
-    h('div', { className: 'when', text: f ? `Changed ${ago(f.t)}, at ${clock(f.t)}` : `You will see it here when ${them()} shares.` }),
+    h('div', { className: 'when', text: f ? whenText(f, `Changed ${ago(f.t)}, at ${clock(f.t)}`) : `You will see it here when ${them()} shares.` }),
+    f ? editLink(f) : null,
   ].filter(Boolean));
   const own = latestFeeling(myTag());
   slots.mine.replaceChildren(
@@ -404,7 +449,8 @@ function paintHero() {
     h('div', { className: 'own-text' }, ...[
       h('b', { text: own ? `You: ${own.x}` : 'You have not shared yet' }),
       own ? pointsList(own.pts) : null,
-      h('small', { text: own ? `Changed ${ago(own.t)}` : 'Pick a feeling below.' }),
+      h('small', { text: own ? whenText(own, `Changed ${ago(own.t)}`) : 'Pick a feeling below.' }),
+      own ? editLink(own) : null,
     ].filter(Boolean)),
   );
 }
@@ -432,6 +478,7 @@ function paintLog() {
       h('div', { className: 'txt' }, ...[
         h('span', { text: e.k === 'f' ? `${nameOf(e.by)}: ${e.x}` : `${nameOf('p')} rated the day ${e.v}/10` }),
         e.k === 'f' ? pointsList(e.pts) : null,
+        e.k === 'f' ? h('div', { className: 'row-foot' }, e.ed ? h('small', { text: editedBy(e.ed.by) }) : null, editLink(e)) : null,
       ].filter(Boolean)),
       h('time', { text: clock(e.t) }),
     ));
@@ -447,9 +494,9 @@ function paint() {
   paintLog();
 }
 
-const canSend = () => !!draft.e || draft.pts.some(p => p.t.trim());
+const canSend = (d) => !!d.e || d.pts.some(p => p.t.trim());
 
-function pointRow(p, i, repaint, refresh) {
+function pointRow(d, p, i, repaint, refresh) {
   const face = h('button', { className: 'pt-face', type: 'button', text: p.e, 'aria-label': `Choose emoji for point ${i + 1}`, on: { click: () => { strip.hidden = !strip.hidden; } } });
   const pick = (e) => { p.e = e; face.textContent = e; };
   const own = h('input', { maxLength: 8, autocomplete: 'off', placeholder: '✨', 'aria-label': `Your own emoji for point ${i + 1}`, on: { input: (ev) => { const v = ev.target.value.trim(); if (v) pick(v); } } });
@@ -464,61 +511,64 @@ function pointRow(p, i, repaint, refresh) {
       rows: 2, maxLength: 120, value: p.t, placeholder: 'What happened?', 'aria-label': `Point ${i + 1}`,
       on: { input: (ev) => { p.t = ev.target.value; refresh(); } },
     }),
-    h('button', { className: 'pt-del', type: 'button', text: '×', 'aria-label': `Remove point ${i + 1}`, on: { click: () => { draft.pts.splice(i, 1); repaint(); refresh(); } } }),
+    h('button', { className: 'pt-del', type: 'button', text: '×', 'aria-label': `Remove point ${i + 1}`, on: { click: () => { d.pts.splice(i, 1); repaint(); refresh(); } } }),
     strip,
   );
 }
 
-function pointsEditor(refresh) {
+function pointsEditor(d, refresh) {
   const box = h('div', { className: 'stack' });
   const repaint = () => {
-    const add = h('button', { className: 'ghost', type: 'button', text: '+ Add a numbered point', hidden: draft.pts.length >= MAX_POINTS, on: { click: () => {
-      draft.pts.push({ e: '💗', t: '' });
+    const add = h('button', { className: 'ghost', type: 'button', text: '+ Add a numbered point', hidden: d.pts.length >= MAX_POINTS, on: { click: () => {
+      d.pts.push({ e: '💗', t: '' });
       repaint();
     } } });
-    box.replaceChildren(...draft.pts.map((p, i) => pointRow(p, i, repaint, refresh)), add);
+    box.replaceChildren(...d.pts.map((p, i) => pointRow(d, p, i, repaint, refresh)), add);
   };
   repaint();
   return box;
 }
 
-function feelingForm() {
-  const send = h('button', { className: 'primary', type: 'submit', text: `Send to ${them()}`, disabled: !canSend() });
-  const refresh = () => { send.disabled = !canSend(); };
-  const custom = h('input', { id: 'custom', maxLength: 8, autocomplete: 'off', placeholder: '✨', 'aria-label': 'Your own emoji' });
+function feelingForm(d, { heading, action, run }) {
+  const send = h('button', { className: 'primary', type: 'submit', text: action, disabled: !canSend(d) });
+  const refresh = () => { send.disabled = !canSend(d); };
+  const custom = h('input', {
+    className: 'custom', maxLength: 8, autocomplete: 'off', placeholder: '✨', 'aria-label': 'Your own emoji',
+    value: FEELINGS.some(f => f[0] === d.e) ? '' : d.e,
+  });
   const grid = h('div', { className: 'emoji-grid' });
   const setEmoji = (e) => {
-    draft.e = e;
+    d.e = e;
     refresh();
     [...grid.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.e === e)));
   };
   for (const [e, label] of FEELINGS) {
     grid.append(h('button', {
-      className: 'emoji-btn', type: 'button', 'aria-pressed': String(draft.e === e), 'data-e': e,
+      className: 'emoji-btn', type: 'button', 'aria-pressed': String(d.e === e), 'data-e': e,
       on: { click: () => { custom.value = ''; setEmoji(e); } },
     }, h('span', { text: e }), label));
   }
   custom.addEventListener('input', () => setEmoji(custom.value.trim()));
   const words = h('textarea', {
-    id: 'words', rows: 4, maxLength: 500, placeholder: 'Tell them about it in full sentences', value: draft.x,
-    on: { input: (ev) => { draft.x = ev.target.value; } },
+    rows: 4, maxLength: 520, placeholder: 'Tell them about it in full sentences', value: d.x,
+    on: { input: (ev) => { d.x = ev.target.value; } },
   });
   return h('form', { className: 'stack', on: { submit: async (ev) => {
     ev.preventDefault();
-    if (!canSend() || send.disabled) return;
+    if (!canSend(d) || send.disabled) return;
     send.disabled = true;
-    await shareFeeling();
+    await run();
     refresh();
   } } },
-    h('h2', { text: 'How are you feeling?' }),
+    heading ? h('h2', { text: heading }) : null,
     grid,
     h('div', { className: 'fields' },
-      h('label', { htmlFor: 'custom' }, 'Other emoji', custom),
-      h('label', { htmlFor: 'words' }, 'In your own words (optional)', words),
+      h('label', {}, 'Other emoji', custom),
+      h('label', {}, 'In your own words (optional)', words),
     ),
     h('div', { className: 'stack' },
       h('p', { className: 'small muted', text: 'Several things going on? Give each one a number and its own emoji.' }),
-      pointsEditor(refresh),
+      pointsEditor(d, refresh),
     ),
     send,
   );
@@ -598,11 +648,12 @@ function showHome() {
     slots.log = h('ul', { className: 'log' });
     const history = h('section', { className: 'stack' }, h('h2', { text: 'History' }), slots.log);
     const settings = h('div', { className: 'stack' }, notifySetup(), aboutBlock());
+    const form = feelingForm(draft, { heading: 'How are you feeling?', action: `Send to ${them()}`, run: shareFeeling });
     if (me === 's') {
       slots.rating = h('div', {});
-      app.replaceChildren(top, tabs(), slots.hero, slots.mine, feelingForm(), slots.rating, history, settings);
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, form, slots.rating, history, settings);
     } else {
-      app.replaceChildren(top, tabs(), slots.hero, slots.mine, feelingForm(), ratingBlock(), history, settings);
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, form, ratingBlock(), history, settings);
     }
   } else {
     slots.ideas = h('div', { className: 'stack ideas' });
@@ -644,6 +695,21 @@ const linkTo = (path) => (links.get(path) || {}).url || '';
 const itemsIn = (id) => ideas.items.filter(i => i.album_id === id);
 const coverOf = (id) => itemsIn(id).find(i => i.file_path);
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const albumById = (id) => ideas.albums.find(a => a.id === id);
+const albumsIn = (id) => ideas.albums.filter(a => a.parent_id === id);
+
+/* An album plus every album inside it, however deep. */
+function familyOf(id, seen = new Set()) {
+  if (seen.has(id)) return [];
+  seen.add(id);
+  return [id, ...albumsIn(id).flatMap(a => familyOf(a.id, seen))];
+}
+
+function pathOf(album) {
+  const parts = [];
+  for (let a = album; a && !parts.includes(a.title); a = albumById(a.parent_id)) parts.unshift(a.title);
+  return parts.join(' › ');
+}
 
 function matchOf(album, q) {
   if (!q) return { hit: true, snippet: '' };
@@ -657,11 +723,19 @@ async function paintIdeas() {
   if (!slots.ideas) return;
   if (slots.albumList) {
     const q = ideas.q.trim().toLowerCase();
-    const found = ideas.albums.map(a => ({ a, ...matchOf(a, q) })).filter(r => r.hit);
+    // Searching looks inside every album; browsing shows only the top level.
+    const found = ideas.albums.filter(a => q || !a.parent_id).map(a => ({ a, ...matchOf(a, q) })).filter(r => r.hit)
+      .map(r => ({ ...r, snippet: r.snippet || (r.a.parent_id ? `In ${pathOf(albumById(r.a.parent_id))}` : '') }));
     await linkFiles(found.map(r => coverOf(r.a.id)).filter(Boolean).map(i => i.file_path));
     if (!slots.albumList) return;
     slots.albumList.replaceChildren(...(found.length ? found.map(albumCard) : [h('p', { className: 'muted', text:
       !ideas.loaded ? 'Loading your albums…' : q ? `Nothing found for "${ideas.q.trim()}".` : 'No albums yet. Make your first one above.' })]));
+  }
+  if (slots.subList) {
+    const inside = albumsIn(ideas.open);
+    await linkFiles(inside.map(a => coverOf(a.id)).filter(Boolean).map(i => i.file_path));
+    if (!slots.subList) return;
+    slots.subList.replaceChildren(...inside.map(a => albumCard({ a, snippet: '' })));
   }
   if (slots.itemList) {
     const list = itemsIn(ideas.open);
@@ -673,13 +747,14 @@ async function paintIdeas() {
 
 function albumCard({ a, snippet }) {
   const cover = coverOf(a.id);
-  const count = itemsIn(a.id).length;
+  const inside = albumsIn(a.id).length;
+  const count = [inside ? plural(inside, 'album') : '', plural(itemsIn(a.id).length, 'thing')].filter(Boolean).join(' · ');
   return h('button', { className: 'album', type: 'button', on: { click: () => { ideas.open = a.id; composing = null; showIdeas(); } } },
     cover && linkTo(cover.file_path)
       ? h('img', { src: linkTo(cover.file_path), alt: '', loading: 'lazy' })
       : h('span', { className: 'album-blank', text: '♡' }),
     h('span', { className: 'album-title', text: a.title }),
-    h('span', { className: 'album-meta', text: snippet || `${plural(count, 'thing')} · by ${nameOf(a.made_by)}` }),
+    h('span', { className: 'album-meta', text: snippet || `${count} · by ${nameOf(a.made_by)}` }),
   );
 }
 
@@ -695,21 +770,69 @@ function itemCard(item) {
     : h('img', { src: linkTo(item.file_path), alt: item.kind === 'drawing' ? 'Drawing' : 'Photo', loading: 'lazy' });
   return h('article', { className: `item ${item.kind}` }, body,
     h('footer', {},
-      h('span', { text: `${nameOf(item.made_by)} · ${ago(new Date(item.made_at).getTime())}` }),
-      twoTapDelete('Delete', () => deleteItem(item)),
+      h('span', { text: [
+        `${nameOf(item.made_by)} · ${ago(new Date(item.made_at).getTime())}`,
+        item.edited_by ? editedBy(item.edited_by) : '',
+      ].filter(Boolean).join(' · ') }),
+      h('span', { className: 'item-tools' },
+        item.kind === 'note' ? h('button', { className: 'link', type: 'button', text: 'Edit', on: { click: () => editNote(item) } }) : null,
+        twoTapDelete('Delete', () => deleteItem(item)),
+      ),
     ),
   );
 }
 
-async function createAlbum(title) {
-  const { data, error } = await db.from('albums').insert({ title, made_by: myTag() }).select().single();
+function editNote(item) {
+  const text = h('textarea', { rows: 8, maxLength: 5000, value: item.body, 'aria-label': 'Your note' });
+  const save = h('button', { className: 'primary', type: 'submit', text: 'Save changes' });
+  sheet('Edit this note', (close) => [h('form', { className: 'stack', on: { submit: async (ev) => {
+    ev.preventDefault();
+    const body = text.value.trim();
+    if (!body) return;
+    save.disabled = true;
+    const { data, error } = await db.from('album_items')
+      .update({ body, edited_by: myTag(), edited_at: new Date().toISOString() }).eq('id', item.id).select().single();
+    save.disabled = false;
+    if (error) { failed('Could not save. Check your connection and try again.'); return; }
+    ideas.items = ideas.items.map(i => (i.id === data.id ? data : i));
+    close();
+    await paintIdeas();
+    notify(`✏️ ${you()} edited a note in ${albumById(item.album_id).title}`, body.slice(0, 200));
+    toast('Saved');
+  } } }, text, save)]);
+}
+
+async function createAlbum(title, parent = null) {
+  const { data, error } = await db.from('albums').insert({ title, parent_id: parent, made_by: myTag() }).select().single();
   if (error) return failed('Could not make the album. Check your connection and try again.');
   ideas.albums.unshift(data);
   ideas.open = data.id;
   composing = null;
   showIdeas();
-  notify(`📒 ${you()} made an album`, title);
+  notify(`📒 ${you()} made an album`, pathOf(data));
   return true;
+}
+
+function chooseHome(album) {
+  const family = familyOf(album.id);
+  const homes = ideas.albums.filter(a => !family.includes(a.id) && a.id !== album.parent_id);
+  sheet('Move this album', (close) => {
+    const pick = (label, parent) => h('button', { className: 'ghost', type: 'button', text: label, on: { click: () => moveAlbum(album, parent, close) } });
+    return [
+      album.parent_id ? pick('All albums (top level)', null) : null,
+      ...homes.map(a => pick(pathOf(a), a.id)),
+      !album.parent_id && !homes.length ? h('p', { className: 'muted', text: 'Make another album first, then you can move this one into it.' }) : null,
+    ].filter(Boolean);
+  });
+}
+
+async function moveAlbum(album, parent, close) {
+  const { error } = await db.from('albums').update({ parent_id: parent }).eq('id', album.id);
+  if (error) { failed('Could not move it. Check your connection and try again.'); return; }
+  album.parent_id = parent;
+  close();
+  showIdeas();
+  toast('Moved');
 }
 
 async function addItem(row, what) {
@@ -737,18 +860,21 @@ async function deleteItem(item) {
 }
 
 async function deleteAlbum(id) {
-  const files = itemsIn(id).filter(i => i.file_path).map(i => i.file_path);
+  const family = familyOf(id);
+  const parent = albumById(id).parent_id;
+  const files = ideas.items.filter(i => family.includes(i.album_id) && i.file_path).map(i => i.file_path);
   if (files.length) await db.storage.from(BUCKET).remove(files);
   const { error } = await db.from('albums').delete().eq('id', id);
   if (error) return failed('Could not delete. Check your connection and try again.');
-  ideas.albums = ideas.albums.filter(a => a.id !== id);
-  ideas.items = ideas.items.filter(i => i.album_id !== id);
-  ideas.open = null;
+  ideas.albums = ideas.albums.filter(a => !family.includes(a.id));
+  ideas.items = ideas.items.filter(i => !family.includes(i.album_id));
+  ideas.open = parent;
   showIdeas();
 }
 
 function showIdeas() {
   slots.albumList = null;
+  slots.subList = null;
   slots.itemList = null;
   if (ideas.open) showAlbum(); else showAlbumList();
   paintIdeas();
@@ -776,7 +902,9 @@ function showAlbumList() {
 function showAlbum() {
   const album = ideas.albums.find(a => a.id === ideas.open);
   if (!album) { ideas.open = null; return showAlbumList(); }
+  const parent = albumById(album.parent_id);
   slots.composer = h('div', { className: 'stack' });
+  slots.subList = h('div', { className: 'albums' });
   slots.itemList = h('div', { className: 'stack' });
   const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, on: { change: async (ev) => {
     const files = [...ev.target.files];
@@ -786,12 +914,20 @@ function showAlbum() {
   const action = (label, fn) => h('button', { className: 'ghost', type: 'button', text: label, on: { click: fn } });
   const open = (mode) => () => { composing = composing === mode ? null : mode; paintComposer(); };
   slots.ideas.replaceChildren(
-    h('button', { className: 'link back', type: 'button', text: '‹ All albums', on: { click: () => { ideas.open = null; composing = null; showIdeas(); } } }),
+    h('button', { className: 'link back', type: 'button', text: `‹ ${parent ? parent.title : 'All albums'}`, on: { click: () => {
+      ideas.open = parent ? parent.id : null;
+      composing = null;
+      showIdeas();
+    } } }),
     h('h2', { text: album.title }),
-    h('div', { className: 'actions' }, action('Write', open('note')), action('Draw', open('draw')), action('Photo', () => picker.click()), picker),
+    h('div', { className: 'actions' }, action('Write', open('note')), action('Draw', open('draw')), action('Photo', () => picker.click()), action('Album', open('album')), picker),
     slots.composer,
+    slots.subList,
     slots.itemList,
-    h('p', { className: 'small' }, twoTapDelete('Delete this album', () => deleteAlbum(album.id))),
+    h('p', { className: 'small album-tools' },
+      h('button', { className: 'link', type: 'button', text: 'Move this album', on: { click: () => chooseHome(album) } }),
+      twoTapDelete('Delete this album', () => deleteAlbum(album.id)),
+    ),
   );
   paintComposer();
 }
@@ -799,7 +935,17 @@ function showAlbum() {
 function paintComposer() {
   if (composing === 'note') slots.composer.replaceChildren(noteComposer());
   else if (composing === 'draw') slots.composer.replaceChildren(padNode ||= drawPad());
+  else if (composing === 'album') slots.composer.replaceChildren(albumComposer());
   else slots.composer.replaceChildren();
+}
+
+function albumComposer() {
+  const title = h('input', { id: 'inner-title', maxLength: 80, autocomplete: 'off', placeholder: 'Name the album inside', 'aria-label': 'New album name' });
+  return h('form', { className: 'copyline', on: { submit: async (ev) => {
+    ev.preventDefault();
+    const name = title.value.trim();
+    if (name) await createAlbum(name, ideas.open);
+  } } }, title, h('button', { className: 'ghost', type: 'submit', text: 'Add' }));
 }
 
 function noteComposer() {

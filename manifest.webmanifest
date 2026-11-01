@@ -1,0 +1,14 @@
+{
+  "name": "howisgenesisfeelingrightnow",
+  "short_name": "howisgenesisfeelingrightnow",
+  "description": "Share how you feel and rate the day.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffe3ef",
+  "theme_color": "#ff8fbe",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

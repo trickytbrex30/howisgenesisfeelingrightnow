@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>howisgenesisfeelingrightnow</title>
+<meta name="description" content="A private little page for two: share how you feel, rate the day.">
+<meta name="theme-color" content="#ff8fbe">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="howisgenesisfeelingrightnow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: a sticker-book page on pink gingham, the current feeling as the big stitched card */
+:root {
+  color-scheme: light;
+  --check-a: #ffe3ef; --check-b: #ffeff6; --surface: #fffafc; --tint: #ffe0ee;
+  --fg: #6e2450; --muted: #93406f; --line: #ffb3d1; --pink: #ff8fbe; --shadow: #ffc4dc;
+  --on-pink: #5a1c3f; --error: #b3163f; --star: #ffd76e;
+  --display: "Mochiy Pop One", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--fg); font: 600 16px/1.5 var(--body);
+  background-color: var(--check-a);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='132' height='132'%3E%3Cpath fill='%23ffc9de' d='M16 30s-9-5.600-9-12.400a5 5 0 0 1 9-3.200 5 5 0 0 1 9 3.200c0 6.800-9 12.400-9 12.400z'/%3E%3Cpath fill='%23ffd9e8' d='M92 104s-7-4.400-7-9.600a3.900 3.900 0 0 1 7-2.500 3.900 3.900 0 0 1 7 2.500c0 5.200-7 9.600-7 9.600z'/%3E%3C/svg%3E"),
+    conic-gradient(var(--check-b) 25%, var(--check-a) 0 50%, var(--check-b) 0 75%, var(--check-a) 0);
+  background-size: 132px 132px, 44px 44px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+}
+[hidden] { display: none !important; }
+#app { max-width: 460px; margin: 0 auto; display: grid; gap: 24px; }
+h1, h2 { font-family: var(--display); font-weight: 400; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.2rem; }
+h2::before { content: "\2661\00a0"; color: #f0609c; }
+p { margin: 0; }
+.top { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.brand {
+  font-size: .98rem; color: var(--on-pink); background: var(--pink); max-width: 100%; min-width: 0; overflow-wrap: anywhere;
+  padding: 8px 16px; border-radius: 999px; box-shadow: 0 4px 0 #f0609c;
+}
+.status { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.status::before { content: "\2606\00a0"; }
+.status::after { content: "\00a0\2606"; }
+.stack { display: grid; gap: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: .875rem; }
+
+.hero {
+  position: relative; background: var(--surface); border-radius: 30px; padding: 30px 22px 26px;
+  display: grid; justify-items: center; gap: 4px; text-align: center; box-shadow: 0 6px 0 var(--shadow);
+}
+.hero::before {
+  content: ""; position: absolute; inset: 8px; border: 2.5px dashed var(--line); border-radius: 23px; pointer-events: none;
+}
+.hero::after {
+  content: "\2661 \2605 \2661"; position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+  background: var(--pink); color: var(--surface); font-size: .85rem; line-height: 1; letter-spacing: .1em;
+  padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+}
+.hero .who { font-weight: 800; font-size: .9rem; color: var(--muted); }
+.hero .face { font-size: 4.75rem; line-height: 1.15; overflow-wrap: anywhere; animation: bob 2.6s ease-in-out infinite; }
+.hero .words { font: 400 1.45rem/1.25 var(--display); overflow-wrap: anywhere; }
+.hero .words.long { font: 600 1.05rem/1.45 var(--body); }
+.hero .when { font-size: .875rem; color: var(--muted); }
+@keyframes bob { 50% { transform: translateY(-5px) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { .hero .face { animation: none; } }
+
+.own { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 2.5px dashed var(--line); padding: 10px 16px; border-radius: 22px; }
+.own-face { font-size: 2rem; line-height: 1.2; max-width: 40%; overflow-wrap: anywhere; }
+.own-text { display: grid; min-width: 0; }
+.own-text b { font-weight: 800; overflow-wrap: anywhere; }
+.own-text small { font-size: .8rem; color: var(--muted); }
+
+.emoji-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.emoji-btn {
+  display: grid; justify-items: center; gap: 2px; padding: 10px 2px 8px; min-height: 80px;
+  background: var(--surface); color: var(--fg); border: 2.5px solid var(--line); border-radius: 22px;
+  box-shadow: 0 3px 0 var(--shadow); font: 800 .75rem/1.2 var(--body); cursor: pointer;
+}
+.emoji-btn span { font-size: 1.75rem; line-height: 1.2; }
+.emoji-btn[aria-pressed="true"] { border-color: #f0609c; background: var(--tint); transform: translateY(2px); box-shadow: 0 1px 0 #f0609c; }
+
+label { display: grid; gap: 4px; font-weight: 800; font-size: .9rem; }
+input, textarea {
+  width: 100%; min-width: 0; font: 600 16px/1.4 var(--body); color: var(--fg); background: var(--surface);
+  border: 2.5px solid var(--line); border-radius: 16px; padding: 11px 12px;
+}
+textarea { resize: vertical; display: block; }
+input::placeholder, textarea::placeholder { color: #b5709a; }
+.fields { display: grid; gap: 12px; }
+#custom { max-width: 96px; }
+
+.pts { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 6px; justify-self: stretch; text-align: left; }
+.pts li { display: grid; grid-template-columns: 22px 28px minmax(0, 1fr); gap: 4px; align-items: start; font-size: .95rem; }
+.pt-num { font: 400 .95rem/1.6 var(--display); color: #d63c80; text-align: center; }
+.pt-ico { font-size: 1.15rem; line-height: 1.3; text-align: center; overflow-wrap: anywhere; }
+.pt-txt { overflow-wrap: anywhere; }
+.pt-row { display: grid; grid-template-columns: 22px 46px minmax(0, 1fr) 34px; gap: 6px; align-items: start; }
+.pt-row .pt-num { line-height: 46px; }
+.pt-face, .pt-del { height: 46px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; padding: 0; }
+.pt-face { font-size: 1.35rem; overflow: hidden; }
+.pt-del { font: 800 1.2rem var(--body); border-style: dashed; }
+.pt-strip { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; background: var(--tint); padding: 8px; border-radius: 16px; }
+.pt-strip button { height: 42px; font-size: 1.3rem; border: 0; border-radius: 12px; background: var(--surface); cursor: pointer; padding: 0; }
+.pt-strip input { grid-column: 1 / -1; padding: 8px 12px; }
+button { font-family: var(--body); }
+.primary, .ghost { min-height: 50px; border-radius: 999px; padding: 10px 18px; font-weight: 800; font-size: 1rem; cursor: pointer; }
+.primary { background: var(--pink); color: var(--on-pink); border: 0; width: 100%; box-shadow: 0 5px 0 #f0609c; font-family: var(--display); font-weight: 400; }
+.primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #f0609c; }
+.primary:disabled { background: var(--tint); color: var(--muted); box-shadow: 0 5px 0 var(--shadow); cursor: default; }
+.ghost { background: var(--surface); color: var(--fg); border: 2.5px solid var(--line); }
+:focus-visible { outline: 3px solid #f0609c; outline-offset: 2px; }
+
+.scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.scale button {
+  min-height: 54px; border-radius: 20px; border: 2.5px solid var(--line); background: var(--surface);
+  color: var(--fg); font: 400 1.2rem var(--display); cursor: pointer; font-variant-numeric: tabular-nums; box-shadow: 0 3px 0 var(--shadow);
+}
+.scale button[aria-pressed="true"] { background: var(--pink); border-color: #f0609c; color: var(--on-pink); transform: translateY(2px); box-shadow: 0 1px 0 #f0609c; }
+.scale-ends { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
+
+.score { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 2.5px dashed var(--line); padding: 12px 16px; border-radius: 22px; }
+.score b { font: 400 1.6rem var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; color: #d63c80; }
+
+.log { list-style: none; margin: 0; padding: 12px 16px; display: grid; gap: 2px; background: var(--surface); border: 2.5px dashed var(--line); border-radius: 22px; }
+.log .day { font-weight: 800; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding-top: 12px; }
+.log .day:first-child { padding-top: 0; }
+.row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 6px 0; }
+.row .ico { font-size: 1.5rem; text-align: center; overflow-wrap: anywhere; }
+.row .num { font: 400 1.05rem var(--display); text-align: center; color: #d63c80; }
+.row .txt { overflow-wrap: anywhere; }
+.row time { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+details { background: var(--surface); border-radius: 20px; padding: 10px 14px; box-shadow: 0 3px 0 var(--shadow); }
+summary { font-weight: 800; cursor: pointer; min-height: 32px; }
+details .stack { padding-top: 8px; padding-bottom: 4px; }
+ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.copyline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.copyline input { font-size: .875rem; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px);
+  background: var(--on-pink); color: var(--surface); padding: 10px 18px; border-radius: 999px; font-weight: 800; z-index: 5;
+}
+.danger { color: var(--error); }
+
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); padding: 5px; border-radius: 999px; box-shadow: 0 3px 0 var(--shadow); }
+.tabs button { min-height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: 400 1rem var(--display); cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--pink); color: var(--on-pink); }
+.ideas { gap: 16px; }
+.albums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.albums > p { grid-column: 1 / -1; }
+.album {
+  display: grid; gap: 4px; padding: 8px 8px 12px; text-align: left; cursor: pointer; color: var(--fg); min-width: 0;
+  background: var(--surface); border: 2.5px solid var(--line); border-radius: 22px; box-shadow: 0 3px 0 var(--shadow); font-family: var(--body);
+}
+.album img, .album-blank { width: 100%; aspect-ratio: 1; border-radius: 15px; object-fit: cover; display: grid; place-items: center; }
+.album-blank { background: var(--tint); color: #f0609c; font-size: 2.5rem; }
+.album-title { font: 400 1rem/1.25 var(--display); overflow-wrap: anywhere; padding: 4px 4px 0; }
+.album-meta { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; padding: 0 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.actions .ghost { padding: 10px 4px; }
+.link { background: none; border: 0; color: var(--muted); font: 800 .875rem var(--body); cursor: pointer; padding: 6px 0; text-decoration: underline; }
+.link.back { justify-self: start; text-decoration: none; font-size: 1rem; color: var(--fg); }
+.item { background: var(--surface); border-radius: 20px; padding: 10px; display: grid; gap: 6px; box-shadow: 0 3px 0 var(--shadow); min-width: 0; }
+.item img { width: 100%; border-radius: 14px; display: block; min-height: 80px; background: var(--tint); }
+.item .note { padding: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.item footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); padding: 0 6px; }
+.pad { width: 100%; aspect-ratio: 1; display: block; background: #ffffff; border: 2.5px solid var(--line); border-radius: 18px; touch-action: none; cursor: crosshair; }
+.swatches { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.swatches button { aspect-ratio: 1; border-radius: 50%; border: 2.5px solid var(--line); cursor: pointer; padding: 0; }
+.swatches button[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--surface) inset; }
+.pad-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.nibs { display: flex; gap: 6px; }
+.nibs button { min-height: 40px; padding: 4px 10px; border-radius: 999px; border: 2.5px solid var(--line); background: var(--surface); color: var(--fg); font: 800 .8rem var(--body); cursor: pointer; }
+.nibs button[aria-pressed="true"] { background: var(--pink); border-color: #f0609c; color: var(--on-pink); }
+</style>
+</head>
+<body>
+<main id="app"><header class="top"><h1 class="brand">howisgenesisfeelingrightnow</h1></header></main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script>
+const SUPABASE_URL = 'https://ygniwvoqlwlpozagrhwv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_finIPiHMj0WAFt4fGpkpyQ_PEPIJuTp';   // safe to publish: login and database rules protect the data
+const NTFY = 'https://ntfy.sh';
+const SITE = 'howisgenesisfeelingrightnow';
+const BUCKET = 'ideas';
+const PEOPLE = { s: 'Genesis', p: 'Ryan' };
+const USERS = {
+  'adb5c5fe-4047-429f-a5b2-3bf194155819': 's',
+  'a68b5709-11ae-43ab-9d0e-bee3e4d0aa29': 'p',
+};
+const KEY = 'howis.v2';
+const POLL_MS = 30000;
+const MAX_POINTS = 5;
+const PHOTO_SIDE = 1600;   // keeps photos small enough for the free 1 GB of storage
+const PAD_SIZE = 900;
+const INKS = ['#2b1a24', '#f0609c', '#ff8fbe', '#ffb65c', '#ffd76e', '#7fd1ae', '#7cc4ff', '#b794f6'];
+const NIBS = [['Thin', 5], ['Medium', 12], ['Thick', 28]];
+
+const FEELINGS = [
+  ['😊', 'Happy'], ['🥰', 'Loved'], ['😌', 'Calm'], ['🤩', 'Excited'],
+  ['😐', 'Meh'], ['😴', 'Tired'], ['😔', 'Sad'], ['😟', 'Anxious'],
+  ['😤', 'Annoyed'], ['😡', 'Angry'], ['🤒', 'Sick'], ['🤗', 'Need a hug'],
+];
+
+const app = document.getElementById('app');
+const db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+let me = null;              // 's' or 'p'
+let ntfyCode = '';
+let entries = [];
+let online = true;
+let view = 'feelings';
+let draft = { e: '', x: '', pts: [] };
+let slots = {};
+let ideas = { albums: [], items: [], open: null, q: '', loaded: false };
+let composing = null;       // 'note' or 'draw' while the album's add panel is open
+let padNode = null;         // the drawing in progress, kept when moving between screens
+const links = new Map();    // file path -> { url, until }
+let toastTimer;
+
+try { localStorage.removeItem('feels.v1'); } catch {}
+
+function loadLocal() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+function saveLocal(patch) {
+  try { localStorage.setItem(KEY, JSON.stringify({ ...loadLocal(), ...patch })); } catch {}
+}
+
+/* Small DOM helper. Text always goes in through textContent, so nothing received can inject markup. */
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
+    else if (k === 'text') el.textContent = v;
+    else if (k in el && k !== 'list') el[k] = v;
+    else el.setAttribute(k, v);
+  }
+  el.append(...kids.filter(k => k != null));
+  return el;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+async function copy(text, input) {
+  try { await navigator.clipboard.writeText(text); toast('Copied'); }
+  catch { if (input) { input.focus(); input.select(); } toast('Select the text and copy it'); }
+}
+
+const you = () => PEOPLE[me];
+const them = () => PEOPLE[theirTag()];
+const myTag = () => me;
+const theirTag = () => (me === 's' ? 'p' : 's');
+const nameOf = (tag) => (tag === me ? 'You' : PEOPLE[tag] || 'Someone');
+const pad = (n) => String(n).padStart(2, '0');
+const dayKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+function ago(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const hrs = Math.round(m / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.round(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function dayLabel(key) {
+  if (key === dayKey(Date.now())) return 'Today';
+  if (key === dayKey(Date.now() - 864e5)) return 'Yesterday';
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function cleanPoints(list) {
+  if (!Array.isArray(list)) return [];
+  return list.slice(0, MAX_POINTS)
+    .filter(p => p && typeof p.e === 'string' && p.e.length <= 16 && typeof p.t === 'string' && p.t.length <= 130)
+    .map(p => ({ e: p.e, t: p.t }));
+}
+
+function clean(x) {
+  if (!x || typeof x.id !== 'string' || x.id.length > 40 || !Number.isFinite(x.t)) return null;
+  if (x.k === 'f' && typeof x.e === 'string' && x.e.length <= 16 && typeof x.x === 'string' && x.x.length <= 520) {
+    return { id: x.id, k: 'f', t: x.t, e: x.e, x: x.x, by: x.by === 'p' ? 'p' : 's', pts: cleanPoints(x.pts) };
+  }
+  if (x.k === 'r' && Number.isInteger(x.v) && x.v >= 1 && x.v <= 10) {
+    return { id: x.id, k: 'r', t: x.t, v: x.v };
+  }
+  return null;
+}
+
+const failed = (msg) => { online = false; toast(msg); return false; };
+
+/* Notifications are a bonus on top of the database, so a failed one never blocks saving. */
+async function notify(title, message) {
+  try {
+    await fetch(`${NTFY}/`, { method: 'POST', body: JSON.stringify({
+      topic: topic(theirTag()), title, message, click: location.origin + location.pathname,
+    }) });
+  } catch {}
+}
+const topic = (tag) => `howis-${ntfyCode}-${tag}`;
+
+async function loadConfig() {
+  const read = () => db.from('entries').select('data').eq('id', 'config').maybeSingle();
+  let { data, error } = await read();
+  if (error) throw error;
+  if (!data) {
+    const bytes = crypto.getRandomValues(new Uint8Array(15));
+    const code = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    await db.from('entries').upsert({ id: 'config', data: { ntfy: code } }, { onConflict: 'id', ignoreDuplicates: true });
+    ({ data, error } = await read());
+    if (error) throw error;
+  }
+  ntfyCode = data.data.ntfy;
+}
+
+async function refreshFeelings() {
+  const { data, error } = await db.from('entries').select('id, data').neq('id', 'config').order('at', { ascending: false }).limit(300);
+  if (error) { online = false; paint(); return; }
+  online = true;
+  entries = data.map(r => clean({ ...r.data, id: r.id })).filter(Boolean).sort((a, b) => b.t - a.t);
+  paint();
+}
+
+async function saveEntry(entry) {
+  const { error } = await db.from('entries').upsert({ id: entry.id, data: entry, at: new Date(entry.t).toISOString() });
+  if (error) return failed('Could not save. Check your connection and try again.');
+  online = true;
+  await refreshFeelings();
+  return true;
+}
+
+async function shareFeeling() {
+  const pts = draft.pts.map(p => ({ e: p.e, t: p.t.trim() })).filter(p => p.t);
+  const e = draft.e || pts[0].e;
+  const words = draft.x.trim();
+  const x = words || (FEELINGS.find(f => f[0] === e) || [])[1] || 'A few things';
+  const short = [...x].length > 70 ? `${[...x].slice(0, 67).join('')}…` : x;
+  const t = Date.now();
+  if (!await saveEntry({ id: `f${t}`, k: 'f', t, e, x, by: myTag(), pts })) return;
+  draft = { e: '', x: '', pts: [] };
+  showHome();
+  notify(`${e} ${you()}: ${short}`,
+    [short === x ? '' : x, ...pts.map((p, i) => `${i + 1}. ${p.e} ${p.t}`), `Changed at ${clock(t)}`].filter(Boolean).join('\n'));
+  toast(`Sent to ${them()}`);
+}
+
+async function rateDay(v) {
+  const t = Date.now();
+  if (!await saveEntry({ id: `r${dayKey(t)}`, k: 'r', t, v })) return;
+  notify(`${you()} rated today ${v}/10`, `Sent at ${clock(t)}`);
+  toast(`Rated today ${v}/10`);
+}
+
+const feelingBy = (e, by) => e.k === 'f' && e.by === by;
+const latestFeeling = (by) => entries.find(e => feelingBy(e, by));
+const todaysRating = () => entries.find(e => e.k === 'r' && dayKey(e.t) === dayKey(Date.now()));
+
+function pointsList(pts) {
+  if (!pts || !pts.length) return null;
+  return h('ol', { className: 'pts' }, ...pts.map((p, i) => h('li', {},
+    h('span', { className: 'pt-num', text: i + 1 }),
+    h('span', { className: 'pt-ico', text: p.e }),
+    h('span', { className: 'pt-txt', text: p.t }),
+  )));
+}
+
+function paintHero() {
+  const f = latestFeeling(theirTag());
+  const words = f ? f.x : 'Nothing shared yet';
+  slots.hero.replaceChildren(...[
+    h('div', { className: 'who', text: `${them()} right now` }),
+    h('div', { className: 'face', text: f ? f.e : '💭' }),
+    h('div', { className: words.length > 40 ? 'words long' : 'words', text: words }),
+    f ? pointsList(f.pts) : null,
+    h('div', { className: 'when', text: f ? `Changed ${ago(f.t)}, at ${clock(f.t)}` : `You will see it here when ${them()} shares.` }),
+  ].filter(Boolean));
+  const own = latestFeeling(myTag());
+  slots.mine.replaceChildren(
+    h('span', { className: 'own-face', text: own ? own.e : '💭' }),
+    h('div', { className: 'own-text' }, ...[
+      h('b', { text: own ? `You: ${own.x}` : 'You have not shared yet' }),
+      own ? pointsList(own.pts) : null,
+      h('small', { text: own ? `Changed ${ago(own.t)}` : 'Pick a feeling below.' }),
+    ].filter(Boolean)),
+  );
+}
+
+function paintRating() {
+  const r = todaysRating();
+  if (me === 'p') {
+    [...slots.rating.children].forEach((b, i) => b.setAttribute('aria-pressed', String(!!r && r.v === i + 1)));
+    return;
+  }
+  slots.rating.replaceChildren(h('div', { className: 'score' },
+    h('b', { text: r ? `${r.v}/10` : '–' }),
+    h('span', { text: r ? `${them()} rated today, ${ago(r.t)}` : `${them()} has not rated today yet` }),
+  ));
+}
+
+function paintLog() {
+  const items = [];
+  let day = '';
+  for (const e of entries.slice(0, 80)) {
+    const key = dayKey(e.t);
+    if (key !== day) { day = key; items.push(h('li', { className: 'day', text: dayLabel(key) })); }
+    items.push(h('li', { className: 'row' },
+      e.k === 'f' ? h('span', { className: 'ico', text: e.e }) : h('span', { className: 'num', text: e.v }),
+      h('div', { className: 'txt' }, ...[
+        h('span', { text: e.k === 'f' ? `${nameOf(e.by)}: ${e.x}` : `${nameOf('p')} rated the day ${e.v}/10` }),
+        e.k === 'f' ? pointsList(e.pts) : null,
+      ].filter(Boolean)),
+      h('time', { text: clock(e.t) }),
+    ));
+  }
+  slots.log.replaceChildren(...(items.length ? items : [h('li', { className: 'muted', text: 'Feelings and ratings will show up here.' })]));
+}
+
+function paint() {
+  if (slots.status) slots.status.textContent = online ? 'Up to date' : 'Offline, showing saved';
+  if (!slots.hero) return;
+  paintHero();
+  paintRating();
+  paintLog();
+}
+
+const canSend = () => !!draft.e || draft.pts.some(p => p.t.trim());
+
+function pointRow(p, i, repaint, refresh) {
+  const face = h('button', { className: 'pt-face', type: 'button', text: p.e, 'aria-label': `Choose emoji for point ${i + 1}`, on: { click: () => { strip.hidden = !strip.hidden; } } });
+  const pick = (e) => { p.e = e; face.textContent = e; };
+  const own = h('input', { maxLength: 8, autocomplete: 'off', placeholder: '✨', 'aria-label': `Your own emoji for point ${i + 1}`, on: { input: (ev) => { const v = ev.target.value.trim(); if (v) pick(v); } } });
+  const strip = h('div', { className: 'pt-strip', hidden: true },
+    ...FEELINGS.map(([e, label]) => h('button', { type: 'button', text: e, 'aria-label': label, on: { click: () => { pick(e); strip.hidden = true; } } })),
+    own,
+  );
+  return h('div', { className: 'pt-row' },
+    h('span', { className: 'pt-num', text: i + 1 }),
+    face,
+    h('textarea', {
+      rows: 2, maxLength: 120, value: p.t, placeholder: 'What happened?', 'aria-label': `Point ${i + 1}`,
+      on: { input: (ev) => { p.t = ev.target.value; refresh(); } },
+    }),
+    h('button', { className: 'pt-del', type: 'button', text: '×', 'aria-label': `Remove point ${i + 1}`, on: { click: () => { draft.pts.splice(i, 1); repaint(); refresh(); } } }),
+    strip,
+  );
+}
+
+function pointsEditor(refresh) {
+  const box = h('div', { className: 'stack' });
+  const repaint = () => {
+    const add = h('button', { className: 'ghost', type: 'button', text: '+ Add a numbered point', hidden: draft.pts.length >= MAX_POINTS, on: { click: () => {
+      draft.pts.push({ e: '💗', t: '' });
+      repaint();
+    } } });
+    box.replaceChildren(...draft.pts.map((p, i) => pointRow(p, i, repaint, refresh)), add);
+  };
+  repaint();
+  return box;
+}
+
+function feelingForm() {
+  const send = h('button', { className: 'primary', type: 'submit', text: `Send to ${them()}`, disabled: !canSend() });
+  const refresh = () => { send.disabled = !canSend(); };
+  const custom = h('input', { id: 'custom', maxLength: 8, autocomplete: 'off', placeholder: '✨', 'aria-label': 'Your own emoji' });
+  const grid = h('div', { className: 'emoji-grid' });
+  const setEmoji = (e) => {
+    draft.e = e;
+    refresh();
+    [...grid.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.e === e)));
+  };
+  for (const [e, label] of FEELINGS) {
+    grid.append(h('button', {
+      className: 'emoji-btn', type: 'button', 'aria-pressed': String(draft.e === e), 'data-e': e,
+      on: { click: () => { custom.value = ''; setEmoji(e); } },
+    }, h('span', { text: e }), label));
+  }
+  custom.addEventListener('input', () => setEmoji(custom.value.trim()));
+  const words = h('textarea', {
+    id: 'words', rows: 4, maxLength: 500, placeholder: 'Tell them about it in full sentences', value: draft.x,
+    on: { input: (ev) => { draft.x = ev.target.value; } },
+  });
+  return h('form', { className: 'stack', on: { submit: async (ev) => {
+    ev.preventDefault();
+    if (!canSend() || send.disabled) return;
+    send.disabled = true;
+    await shareFeeling();
+    refresh();
+  } } },
+    h('h2', { text: 'How are you feeling?' }),
+    grid,
+    h('div', { className: 'fields' },
+      h('label', { htmlFor: 'custom' }, 'Other emoji', custom),
+      h('label', { htmlFor: 'words' }, 'In your own words (optional)', words),
+    ),
+    h('div', { className: 'stack' },
+      h('p', { className: 'small muted', text: 'Several things going on? Give each one a number and its own emoji.' }),
+      pointsEditor(refresh),
+    ),
+    send,
+  );
+}
+
+function ratingBlock() {
+  slots.rating = h('div', { className: 'scale' });
+  for (let i = 1; i <= 10; i++) {
+    slots.rating.append(h('button', { type: 'button', text: i, 'aria-pressed': 'false', 'aria-label': `${i} out of 10`, on: { click: () => rateDay(i) } }));
+  }
+  return h('section', { className: 'stack' },
+    h('h2', { text: 'How was today?' }),
+    slots.rating,
+    h('div', { className: 'scale-ends' }, h('span', { text: '1 awful' }), h('span', { text: '10 amazing' })),
+    h('p', { className: 'small muted', text: 'Tap a different number to change it.' }),
+  );
+}
+
+function copyLine(value, label) {
+  const input = h('input', { readOnly: true, value, 'aria-label': label });
+  return h('div', { className: 'copyline' }, input,
+    h('button', { className: 'ghost', type: 'button', text: 'Copy', on: { click: () => copy(value, input) } }));
+}
+
+function notifySetup() {
+  const mine = topic(me);
+  const test = h('button', { className: 'ghost', type: 'button', text: 'Send a test notification', on: { click: async () => {
+    try {
+      await fetch(`${NTFY}/`, { method: 'POST', body: JSON.stringify({ topic: mine, title: SITE, message: 'Notifications are working.' }) });
+      toast('Test sent');
+    } catch { toast('Could not send. Check your connection.'); }
+  } } });
+  return h('details', {},
+    h('summary', { text: 'Turn on notifications' }),
+    h('div', { className: 'stack' },
+      h('p', { text: `Get a buzz on this phone when ${them()} shares a feeling${me === 's' ? ', rates the day,' : ''} or adds to an album. It uses ntfy, a free app.` }),
+      h('ol', {},
+        h('li', { text: 'Install "ntfy" from the App Store or Google Play.' }),
+        h('li', { text: 'Open it, tap +, and paste the name below as the topic.' }),
+        h('li', { text: 'Allow notifications when it asks.' }),
+      ),
+      copyLine(mine, 'Notification topic'),
+      test,
+      h('p', { className: 'small muted', text: 'Keep this name private. Anyone who has it can read your notifications.' }),
+    ),
+  );
+}
+
+function aboutBlock() {
+  return h('details', {},
+    h('summary', { text: 'Add to home screen and more' }),
+    h('div', { className: 'stack' },
+      h('p', { text: 'iPhone: tap Share, then Add to Home Screen. Android: open the browser menu, then Add to Home screen.' }),
+      h('button', { className: 'ghost', type: 'button', text: 'Log out', on: { click: async () => {
+        await db.auth.signOut();
+        location.reload();
+      } } }),
+    ),
+  );
+}
+
+function tabs() {
+  const tab = (id, label) => h('button', { type: 'button', text: label, 'aria-pressed': String(view === id), on: { click: () => {
+    if (view === id) return;
+    view = id;
+    showHome();
+  } } });
+  return h('nav', { className: 'tabs' }, tab('feelings', 'Feelings'), tab('ideas', 'Ideas'));
+}
+
+function showHome() {
+  slots = { status: h('span', { className: 'status', text: 'Checking…' }) };
+  const top = h('header', { className: 'top' }, h('h1', { className: 'brand', text: SITE }), slots.status);
+  if (view === 'feelings') {
+    slots.hero = h('section', { className: 'hero', 'aria-live': 'polite' });
+    slots.mine = h('section', { className: 'own' });
+    slots.log = h('ul', { className: 'log' });
+    const history = h('section', { className: 'stack' }, h('h2', { text: 'History' }), slots.log);
+    const settings = h('div', { className: 'stack' }, notifySetup(), aboutBlock());
+    if (me === 's') {
+      slots.rating = h('div', {});
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, feelingForm(), slots.rating, history, settings);
+    } else {
+      app.replaceChildren(top, tabs(), slots.hero, slots.mine, feelingForm(), ratingBlock(), history, settings);
+    }
+  } else {
+    slots.ideas = h('div', { className: 'stack ideas' });
+    app.replaceChildren(top, tabs(), slots.ideas);
+    showIdeas();
+  }
+  paint();
+}
+
+/* ---- Ideas: shared albums of notes, drawings and photos ---- */
+
+async function refreshIdeas() {
+  const [a, b] = await Promise.all([
+    db.from('albums').select('*').order('made_at', { ascending: false }),
+    db.from('album_items').select('*').order('made_at', { ascending: false }),
+  ]);
+  if (a.error || b.error) { online = false; paint(); return; }
+  online = true;
+  // Only redraw when something changed (or photo links are near expiry), so the page never jumps while reading.
+  const seen = JSON.stringify([a.data, b.data, Math.floor(Date.now() / 3e6)]);
+  if (seen === ideas.seen) { paint(); return; }
+  ideas.seen = seen;
+  ideas.albums = a.data;
+  ideas.items = b.data;
+  ideas.loaded = true;
+  if (ideas.open && !ideas.albums.some(x => x.id === ideas.open)) { ideas.open = null; composing = null; if (slots.ideas) showIdeas(); }
+  await paintIdeas();
+}
+
+async function linkFiles(paths) {
+  const need = [...new Set(paths)].filter(p => { const l = links.get(p); return !l || l.until < Date.now(); });
+  if (!need.length) return;
+  const { data, error } = await db.storage.from(BUCKET).createSignedUrls(need, 3600);
+  if (error) return;
+  for (const r of data) if (r.signedUrl) links.set(r.path, { url: r.signedUrl, until: Date.now() + 3000 * 1000 });
+}
+const linkTo = (path) => (links.get(path) || {}).url || '';
+
+const itemsIn = (id) => ideas.items.filter(i => i.album_id === id);
+const coverOf = (id) => itemsIn(id).find(i => i.file_path);
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function matchOf(album, q) {
+  if (!q) return { hit: true, snippet: '' };
+  if (album.title.toLowerCase().includes(q)) return { hit: true, snippet: '' };
+  const note = itemsIn(album.id).find(i => i.body.toLowerCase().includes(q));
+  return note ? { hit: true, snippet: note.body } : { hit: false, snippet: '' };
+}
+
+async function paintIdeas() {
+  if (slots.status) paint();
+  if (!slots.ideas) return;
+  if (slots.albumList) {
+    const q = ideas.q.trim().toLowerCase();
+    const found = ideas.albums.map(a => ({ a, ...matchOf(a, q) })).filter(r => r.hit);
+    await linkFiles(found.map(r => coverOf(r.a.id)).filter(Boolean).map(i => i.file_path));
+    if (!slots.albumList) return;
+    slots.albumList.replaceChildren(...(found.length ? found.map(albumCard) : [h('p', { className: 'muted', text:
+      !ideas.loaded ? 'Loading your albums…' : q ? `Nothing found for "${ideas.q.trim()}".` : 'No albums yet. Make your first one above.' })]));
+  }
+  if (slots.itemList) {
+    const list = itemsIn(ideas.open);
+    await linkFiles(list.filter(i => i.file_path).map(i => i.file_path));
+    if (!slots.itemList) return;
+    slots.itemList.replaceChildren(...(list.length ? list.map(itemCard) : [h('p', { className: 'muted', text: 'Nothing in here yet. Write, draw or add a photo.' })]));
+  }
+}
+
+function albumCard({ a, snippet }) {
+  const cover = coverOf(a.id);
+  const count = itemsIn(a.id).length;
+  return h('button', { className: 'album', type: 'button', on: { click: () => { ideas.open = a.id; composing = null; showIdeas(); } } },
+    cover && linkTo(cover.file_path)
+      ? h('img', { src: linkTo(cover.file_path), alt: '', loading: 'lazy' })
+      : h('span', { className: 'album-blank', text: '♡' }),
+    h('span', { className: 'album-title', text: a.title }),
+    h('span', { className: 'album-meta', text: snippet || `${plural(count, 'thing')} · by ${nameOf(a.made_by)}` }),
+  );
+}
+
+function twoTapDelete(label, run) {
+  const yes = h('button', { className: 'link danger', type: 'button', hidden: true, text: 'Yes, delete', on: { click: run } });
+  const ask = h('button', { className: 'link', type: 'button', text: label, on: { click: () => { ask.hidden = true; yes.hidden = false; } } });
+  return h('span', {}, ask, yes);
+}
+
+function itemCard(item) {
+  const body = item.kind === 'note'
+    ? h('p', { className: 'note', text: item.body })
+    : h('img', { src: linkTo(item.file_path), alt: item.kind === 'drawing' ? 'Drawing' : 'Photo', loading: 'lazy' });
+  return h('article', { className: `item ${item.kind}` }, body,
+    h('footer', {},
+      h('span', { text: `${nameOf(item.made_by)} · ${ago(new Date(item.made_at).getTime())}` }),
+      twoTapDelete('Delete', () => deleteItem(item)),
+    ),
+  );
+}
+
+async function createAlbum(title) {
+  const { data, error } = await db.from('albums').insert({ title, made_by: myTag() }).select().single();
+  if (error) return failed('Could not make the album. Check your connection and try again.');
+  ideas.albums.unshift(data);
+  ideas.open = data.id;
+  composing = null;
+  showIdeas();
+  notify(`📒 ${you()} made an album`, title);
+  return true;
+}
+
+async function addItem(row, what) {
+  const album = ideas.albums.find(a => a.id === ideas.open);
+  const { data, error } = await db.from('album_items').insert({ ...row, album_id: album.id, made_by: myTag() }).select().single();
+  if (error) return failed('Could not save. Check your connection and try again.');
+  ideas.items.unshift(data);
+  await paintIdeas();
+  notify(`📒 ${you()} added ${what} to ${album.title}`, (row.body || 'Tap to see it').slice(0, 200));
+  return true;
+}
+
+async function uploadFile(blob, ext) {
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await db.storage.from(BUCKET).upload(path, blob, { contentType: blob.type });
+  return error ? null : path;
+}
+
+async function deleteItem(item) {
+  if (item.file_path) await db.storage.from(BUCKET).remove([item.file_path]);
+  const { error } = await db.from('album_items').delete().eq('id', item.id);
+  if (error) return failed('Could not delete. Check your connection and try again.');
+  ideas.items = ideas.items.filter(i => i.id !== item.id);
+  await paintIdeas();
+}
+
+async function deleteAlbum(id) {
+  const files = itemsIn(id).filter(i => i.file_path).map(i => i.file_path);
+  if (files.length) await db.storage.from(BUCKET).remove(files);
+  const { error } = await db.from('albums').delete().eq('id', id);
+  if (error) return failed('Could not delete. Check your connection and try again.');
+  ideas.albums = ideas.albums.filter(a => a.id !== id);
+  ideas.items = ideas.items.filter(i => i.album_id !== id);
+  ideas.open = null;
+  showIdeas();
+}
+
+function showIdeas() {
+  slots.albumList = null;
+  slots.itemList = null;
+  if (ideas.open) showAlbum(); else showAlbumList();
+  paintIdeas();
+}
+
+function showAlbumList() {
+  const title = h('input', { id: 'album-title', maxLength: 80, autocomplete: 'off', placeholder: 'Date ideas, trip plans…', 'aria-label': 'New album name' });
+  const search = h('input', { id: 'album-search', type: 'search', autocomplete: 'off', placeholder: 'Search albums and notes', 'aria-label': 'Search albums', value: ideas.q,
+    on: { input: (ev) => { ideas.q = ev.target.value; paintIdeas(); } } });
+  slots.albumList = h('div', { className: 'albums' });
+  slots.ideas.replaceChildren(
+    search,
+    h('form', { className: 'copyline', on: { submit: async (ev) => {
+      ev.preventDefault();
+      const name = title.value.trim();
+      if (name) await createAlbum(name);
+    } } },
+      title,
+      h('button', { className: 'ghost', type: 'submit', text: 'New album' }),
+    ),
+    slots.albumList,
+  );
+}
+
+function showAlbum() {
+  const album = ideas.albums.find(a => a.id === ideas.open);
+  if (!album) { ideas.open = null; return showAlbumList(); }
+  slots.composer = h('div', { className: 'stack' });
+  slots.itemList = h('div', { className: 'stack' });
+  const picker = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, on: { change: async (ev) => {
+    const files = [...ev.target.files];
+    ev.target.value = '';
+    await addPhotos(files);
+  } } });
+  const action = (label, fn) => h('button', { className: 'ghost', type: 'button', text: label, on: { click: fn } });
+  const open = (mode) => () => { composing = composing === mode ? null : mode; paintComposer(); };
+  slots.ideas.replaceChildren(
+    h('button', { className: 'link back', type: 'button', text: '‹ All albums', on: { click: () => { ideas.open = null; composing = null; showIdeas(); } } }),
+    h('h2', { text: album.title }),
+    h('div', { className: 'actions' }, action('Write', open('note')), action('Draw', open('draw')), action('Photo', () => picker.click()), picker),
+    slots.composer,
+    slots.itemList,
+    h('p', { className: 'small' }, twoTapDelete('Delete this album', () => deleteAlbum(album.id))),
+  );
+  paintComposer();
+}
+
+function paintComposer() {
+  if (composing === 'note') slots.composer.replaceChildren(noteComposer());
+  else if (composing === 'draw') slots.composer.replaceChildren(padNode ||= drawPad());
+  else slots.composer.replaceChildren();
+}
+
+function noteComposer() {
+  const text = h('textarea', { id: 'note-text', rows: 5, maxLength: 5000, placeholder: 'Write your idea…', 'aria-label': 'Your note' });
+  const save = h('button', { className: 'primary', type: 'submit', text: 'Save note' });
+  return h('form', { className: 'stack', on: { submit: async (ev) => {
+    ev.preventDefault();
+    const body = text.value.trim();
+    if (!body) return;
+    save.disabled = true;
+    const ok = await addItem({ kind: 'note', body }, 'a note');
+    save.disabled = false;
+    if (ok) { composing = null; paintComposer(); toast('Saved'); }
+  } } }, text, save);
+}
+
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, PHOTO_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = h('canvas', { width: Math.round(img.naturalWidth * scale), height: Math.round(img.naturalHeight * scale) });
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise(done => canvas.toBlob(done, 'image/jpeg', 0.85));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function addPhotos(files) {
+  let added = 0;
+  for (const [i, file] of files.entries()) {
+    toast(files.length > 1 ? `Adding photo ${i + 1} of ${files.length}…` : 'Adding photo…');
+    let blob = null;
+    try { blob = await shrinkPhoto(file); } catch {}
+    if (!blob) { toast('That photo could not be read. Try a different one.'); continue; }
+    const path = await uploadFile(blob, 'jpg');
+    if (!path) { failed('Could not upload. Check your connection and try again.'); return; }
+    if (await addItem({ kind: 'photo', file_path: path }, 'a photo')) added++;
+  }
+  if (added) toast(added === files.length ? 'Added' : `Added ${added} of ${files.length} photos`);
+}
+
+function drawPad() {
+  const canvas = h('canvas', { className: 'pad', width: PAD_SIZE, height: PAD_SIZE, 'aria-label': 'Drawing pad' });
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, PAD_SIZE, PAD_SIZE);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  let ink = INKS[1];
+  let nib = NIBS[1][1];
+  let last = null;
+  const undo = [];
+
+  const at = (ev) => {
+    const r = canvas.getBoundingClientRect();
+    return [(ev.clientX - r.left) * (PAD_SIZE / r.width), (ev.clientY - r.top) * (PAD_SIZE / r.height)];
+  };
+  const stroke = (from, to) => {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = nib;
+    ctx.beginPath();
+    ctx.moveTo(...from);
+    ctx.lineTo(...to);
+    ctx.stroke();
+  };
+  canvas.addEventListener('pointerdown', (ev) => {
+    ev.preventDefault();
+    canvas.setPointerCapture(ev.pointerId);
+    undo.push(ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE));
+    if (undo.length > 10) undo.shift();
+    last = at(ev);
+    stroke(last, last);
+  });
+  canvas.addEventListener('pointermove', (ev) => {
+    if (!last) return;
+    ev.preventDefault();
+    const next = at(ev);
+    stroke(last, next);
+    last = next;
+  });
+  const lift = () => { last = null; };
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
+
+  const swatches = h('div', { className: 'swatches' });
+  const choose = (color) => {
+    ink = color;
+    [...swatches.children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ink === color)));
+  };
+  for (const color of [...INKS, '#ffffff']) {
+    swatches.append(h('button', {
+      type: 'button', 'data-ink': color, style: `background:${color}`, 'aria-pressed': String(color === ink),
+      'aria-label': color === '#ffffff' ? 'Eraser' : `Colour ${color}`, on: { click: () => choose(color) },
+    }));
+  }
+  const nibs = h('div', { className: 'nibs' });
+  for (const [label, size] of NIBS) {
+    nibs.append(h('button', { type: 'button', text: label, 'aria-pressed': String(size === nib), on: { click: (ev) => {
+      nib = size;
+      [...nibs.children].forEach(b => b.setAttribute('aria-pressed', String(b === ev.currentTarget)));
+    } } }));
+  }
+  const save = h('button', { className: 'primary', type: 'button', text: 'Save drawing', on: { click: async () => {
+    if (!undo.length) { toast('Draw something first'); return; }
+    save.disabled = true;
+    const blob = await new Promise(done => canvas.toBlob(done, 'image/png'));
+    const path = blob && await uploadFile(blob, 'png');
+    if (!path) { save.disabled = false; failed('Could not upload. Check your connection and try again.'); return; }
+    const ok = await addItem({ kind: 'drawing', file_path: path }, 'a drawing');
+    save.disabled = false;
+    if (ok) { composing = null; padNode = null; paintComposer(); toast('Saved'); }
+  } } });
+  const tool = (label, fn) => h('button', { type: 'button', text: label, on: { click: fn } });
+  return h('div', { className: 'stack' }, canvas, swatches,
+    h('div', { className: 'pad-row' }, nibs,
+      h('div', { className: 'nibs' },
+        tool('Undo', () => { if (undo.length) ctx.putImageData(undo.pop(), 0, 0); }),
+        tool('Clear', () => {
+          undo.push(ctx.getImageData(0, 0, PAD_SIZE, PAD_SIZE));
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, PAD_SIZE, PAD_SIZE);
+        }),
+      ),
+    ),
+    save,
+  );
+}
+
+/* ---- Sign-in ---- */
+
+function showMessage(title, text) {
+  app.replaceChildren(
+    h('header', { className: 'top' }, h('h1', { className: 'brand', text: SITE })),
+    h('section', { className: 'stack' }, h('h2', { text: title }), h('p', { text })),
+  );
+}
+
+function showLogin() {
+  const email = h('input', { id: 'email', type: 'email', required: true, autocomplete: 'username', autocapitalize: 'none' });
+  const password = h('input', { id: 'password', type: 'password', required: true, autocomplete: 'current-password' });
+  const go = h('button', { className: 'primary', type: 'submit', text: 'Log in' });
+  app.replaceChildren(
+    h('header', { className: 'top' }, h('h1', { className: 'brand', text: SITE })),
+    h('form', { className: 'stack', on: { submit: async (ev) => {
+      ev.preventDefault();
+      go.disabled = true;
+      const { data, error } = await db.auth.signInWithPassword({ email: email.value.trim(), password: password.value });
+      go.disabled = false;
+      if (error) { toast(error.status === 400 ? 'Wrong email or password.' : 'Could not log in. Check your connection.'); return; }
+      enter(data.session);
+    } } },
+      h('h2', { text: 'Log in' }),
+      h('p', { className: 'muted', text: 'Just for the two of you. You only need to do this once on each phone.' }),
+      h('label', { htmlFor: 'email' }, 'Email', email),
+      h('label', { htmlFor: 'password' }, 'Password', password),
+      go,
+    ),
+  );
+}
+
+function showWho(session) {
+  const pick = (tag) => h('button', { className: 'primary', type: 'button', text: `I'm ${PEOPLE[tag]}`, on: { click: () => {
+    saveLocal({ me: tag });
+    enter(session);
+  } } });
+  app.replaceChildren(
+    h('header', { className: 'top' }, h('h1', { className: 'brand', text: SITE })),
+    h('section', { className: 'stack' }, h('h2', { text: 'Who is this?' }), pick('s'), pick('p')),
+  );
+}
+
+let listening = false;
+function listen() {
+  if (listening) return;
+  listening = true;
+  const soon = (fn) => { let wait; return () => { clearTimeout(wait); wait = setTimeout(fn, 300); }; };
+  const on = (table, fn) => ['postgres_changes', { event: '*', schema: 'public', table }, soon(fn)];
+  const ideasChanged = soon(refreshIdeas);
+  db.channel('everything')
+    .on(...on('entries', refreshFeelings))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'albums' }, ideasChanged)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'album_items' }, ideasChanged)
+    .subscribe();
+  const check = () => { if (!document.hidden) { refreshFeelings(); refreshIdeas(); } };
+  setInterval(check, POLL_MS);
+  document.addEventListener('visibilitychange', check);
+}
+
+async function enter(session) {
+  me = USERS[session.user.id] || loadLocal().me;
+  if (!me) { showWho(session); return; }
+  try {
+    await loadConfig();
+  } catch {
+    showMessage('Could not connect', 'Check your connection, then open the page again.');
+    return;
+  }
+  showHome();
+  refreshFeelings();
+  refreshIdeas();
+  listen();
+}
+
+async function boot() {
+  if (!db) { showMessage('Could not load', 'Check your connection, then open the page again.'); return; }
+  const { data } = await db.auth.getSession();
+  if (data.session) enter(data.session); else showLogin();
+}
+boot();
+</script>
+</body>
+</html>

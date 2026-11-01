@@ -462,8 +462,8 @@ function appSessions(tag) {
     if (ev.event === 'open') {
       if (running) last.end = t;   // a close can go missing, and the next open ends the visit anyway
       sessions.push({ who: tag, app: ev.app, start: t, end: 0 });
-    } else if (running && last.app === ev.app) {
-      last.end = t;
+    } else if (running && (last.app === ev.app || (ev.app === 'any' && t - last.start > 3000))) {
+      last.end = t;   // when switching apps the old app's "any" close can land just after the new open
     }
   }
   return sessions;
@@ -783,14 +783,16 @@ function appSetup() {
       copyLine(`${SUPABASE_URL}/rest/v1/rpc/log_app`, 'Address'),
       copyLine(SUPABASE_KEY, 'Key'),
       copyLine(appCode, 'Your private code'),
-      h('b', { text: 'Then, twice for each app' }),
+      h('b', { text: 'Then make two automations' }),
       h('ol', {},
-        step('On the Automation tab, tap +, choose App, pick the app and tick Is Opened only.'),
-        step('Choose Run Immediately, then New Blank Automation.'),
-        step('Add a Text action and type the app name, a line, and open, like this: TikTok|open'),
+        step('On the Automation tab, tap +, choose App, tap Choose and tick every app you want to share.'),
+        step('Tick Is Opened only. Choose Run Immediately, then New Blank Automation.'),
+        step('Add the action Get Current App.'),
+        step('Add a Text action. Insert the Current App variable, then type |open right after it.'),
         step('Add the action Run Shortcut, choose Report App, and set its Input to the Text from the step before.'),
-        step('Make a second automation the same way with Is Closed ticked, typing TikTok|close'),
+        step('Make a second automation with the same apps and Is Closed ticked only. It needs no Get Current App. Just add a Text action with any|close in it, then Run Shortcut the same way.'),
       ),
+      h('p', { className: 'small muted', text: 'Get Current App needs iOS 18.2 or newer.' }),
       h('p', { className: 'small muted', text: 'Keep your code private. Anyone who has it could add fake app activity.' }),
     ),
   );
